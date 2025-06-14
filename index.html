@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Gestión de Maquinaria Pesada</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- ===== PANTALLA DE CARGA CENTRADA ===== -->
+    <div id="loading" class="loading-overlay" style="display: flex;">
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Cargando sistema...</p>
+        </div>
+    </div>
+
+    <!-- ===== PANTALLA DE LOGIN ===== -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-header">
+                <h1>🚜 Sistema de Gestión</h1>
+                <p>Maquinaria Pesada</p>
+            </div>
+            
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="usuario">Usuario</label>
+                    <input type="text" id="usuario" class="form-input" required autocomplete="username" placeholder="Ingresa tu usuario">
+                </div>
+                
+                <div class="form-group">
+                    <label for="contraseña">Contraseña</label>
+                    <input type="password" id="contraseña" class="form-input" required autocomplete="current-password" placeholder="Ingresa tu contraseña">
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-login">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <small>Usuario por defecto: <strong>admin</strong> / Contraseña: <strong>admin123</strong></small>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== APLICACIÓN PRINCIPAL ===== -->
+    <div id="mainApp" class="main-app" style="display: none;">
+        
+        <!-- ===== HEADER SIN VERSIÓN ===== -->
+        <header class="header">
+            <div class="header-left">
+                <h1>🚜 Sistema de Gestión de Maquinaria</h1>
+            </div>
+            <div class="header-right">
+                <div id="userInfo" class="user-info">
+                    <span><strong>Administrador del Sistema</strong></span>
+                    <small>Permisos: completo</small>
+                </div>
+                
+                <button id="userManagementButton" onclick="showUserManagement()" class="btn btn-info btn-users" style="display: none;">
+                    <i class="fas fa-users-cog"></i> Usuarios
+                </button>
+                
+                <button onclick="logout()" class="btn btn-secondary btn-logout">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </button>
+            </div>
+        </header>
+
+        <!-- ===== DASHBOARD ===== -->
+        <div id="dashboard" class="dashboard">
+            
+            <!-- ===== ESTADÍSTICAS ===== -->
+            <div class="stats-grid">
+                <div class="stat-card stat-operativas">
+                    <div class="stat-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statOperativas">0</h3>
+                        <p>Operativas</p>
+                        <small>Máquinas funcionando</small>
+                    </div>
+                </div>
+                
+                <div class="stat-card stat-inoperativas">
+                    <div class="stat-icon">
+                        <i class="fas fa-times-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statInoperativas">0</h3>
+                        <p>Inoperativas</p>
+                        <small>Requieren atención</small>
+                    </div>
+                </div>
+                
+                <div class="stat-card stat-standby">
+                    <div class="stat-icon">
+                        <i class="fas fa-pause-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statStandby">0</h3>
+                        <p>En Standby</p>
+                        <small>En espera</small>
+                    </div>
+                </div>
+                
+                <div class="stat-card stat-total">
+                    <div class="stat-icon">
+                        <i class="fas fa-tractor"></i>
+                    </div>
+                    <div class="stat-content">
+                        <h3 id="statTotal">0</h3>
+                        <p>Total</p>
+                        <small>Máquinas registradas</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== GRÁFICOS ===== -->
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-pie"></i> Estado de Maquinarias</h3>
+                    <div class="chart-container">
+                        <canvas id="estadoChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-card">
+                    <h3><i class="fas fa-chart-bar"></i> Mantenimientos por Mes</h3>
+                    <div class="chart-container">
+                        <canvas id="mantenimientosChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== ALERTAS Y NOTAS - LADO A LADO ===== -->
+            <div class="alerts-notes-grid">
+                <!-- ===== ALERTAS DE MANTENIMIENTO ===== -->
+                <div class="alerts-section">
+                    <div class="alerts-header">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Alertas de Mantenimiento</h3>
+                        <div class="alerts-summary">
+                            <div class="alert-count alert-proximos">
+                                <i class="fas fa-clock"></i>
+                                <span id="alertProximos">0</span> Próximos
+                            </div>
+                            <div class="alert-count alert-vencidos">
+                                <i class="fas fa-exclamation-circle"></i>
+                                <span id="alertVencidos">0</span> Vencidos
+                            </div>
+                        </div>
+                    </div>
+                    <div class="alerts-container">
+                        <div id="alertasContainer">
+                            <div class="no-alerts">✅ No hay alertas de mantenimiento pendientes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ===== NOTAS Y RECORDATORIOS ===== -->
+                <div class="notes-section">
+                    <div class="notes-header">
+                        <h3><i class="fas fa-sticky-note"></i> Notas y Recordatorios</h3>
+                        <div class="notes-controls">
+                            <button onclick="loadModule('Notas')" class="btn btn-primary btn-sm">
+                                <i class="fas fa-plus"></i> Nueva Nota
+                            </button>
+                            <button onclick="refreshNotes()" class="btn btn-info btn-sm">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="notes-container">
+                        <div id="notesContainer">
+                            <div class="no-notes">📝 No hay notas pendientes</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== MÓDULOS DEL SISTEMA ===== -->
+            <div class="modules-section">
+                <h3><i class="fas fa-th-large"></i> Módulos del Sistema</h3>
+                <div id="modulesGrid" class="modules-grid">
+                    <div class="no-alerts">📋 Cargando módulos...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== VISTA DE MÓDULO ===== -->
+        <div id="moduleView" class="module-view" style="display: none;">
+            <div class="module-header">
+                <h2 id="moduleTitle">📋 Módulo</h2>
+                <div class="module-controls">
+                    <button onclick="backToDashboard()" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </button>
+                    <button onclick="refreshModule()" class="btn btn-primary">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </button>
+                    <button onclick="showAddModal()" class="btn btn-success">
+                        <i class="fas fa-plus"></i> Agregar
+                    </button>
+                    <button onclick="guardarEnSheets()" class="btn btn-warning">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                    <button onclick="exportarExcel()" class="btn btn-info">
+                        <i class="fas fa-download"></i> Exportar
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-controls">
+                <div class="search-filter">
+                    <div class="search-group">
+                        <input type="text" id="searchInput" class="form-input" placeholder="🔍 Buscar registros...">
+                        <button onclick="clearSearch()" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <select id="filterSelect" class="form-input">
+                        <option value="">Todos los registros</option>
+                    </select>
+                </div>
+                <div class="records-info">
+                    <span id="recordsCount">0 registros</span>
+                    <div class="pagination-size">
+                        <label>Mostrar:</label>
+                        <select id="recordsPerPageSelect" onchange="changeRecordsPerPage()" class="form-input">
+                            <option value="10">10</option>
+                            <option value="25" selected>25</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead id="dataTableHead">
+                            <tr>
+                                <td colspan="100%" style="text-align: center; padding: 2rem;">
+                                    📋 Cargando datos...
+                                </td>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                            <!-- Los datos se cargan aquí dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="pagination">
+                <button onclick="goToFirstPage()" class="btn btn-secondary btn-pagination">
+                    <i class="fas fa-angle-double-left"></i>
+                </button>
+                <button onclick="previousPage()" class="btn btn-secondary btn-pagination">
+                    <i class="fas fa-chevron-left"></i> Anterior
+                </button>
+                <span id="pageInfo">Página 1 de 1</span>
+                <button onclick="nextPage()" class="btn btn-secondary btn-pagination">
+                    Siguiente <i class="fas fa-chevron-right"></i>
+                </button>
+                <button onclick="goToLastPage()" class="btn btn-secondary btn-pagination">
+                    <i class="fas fa-angle-double-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== MODALES ===== -->
+    <div id="modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Modal</h3>
+                <button onclick="closeModal()" class="btn-close">×</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <p>Contenido del modal...</p>
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button onclick="saveRecord()" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="userModal" class="modal" style="display: none;">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h3 id="userModalTitle">👥 Gestión de Usuarios</h3>
+                <button onclick="closeUserModal()" class="btn-close">×</button>
+            </div>
+            <div class="modal-body" id="userModalBody">
+                <!-- Contenido dinámico -->
+            </div>
+            <div class="modal-footer">
+                <button onclick="closeUserModal()" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button onclick="saveUserRecord()" class="btn btn-primary">
+                    <i class="fas fa-user-check"></i> Guardar Usuario
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <!-- ===== SCRIPTS ===== -->
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+    
+    <script>
+        // ===== FUNCIONES PARA NOTAS EN DASHBOARD =====
+        async function loadNotesInDashboard() {
+            try {
+                console.log('📝 Cargando notas en dashboard...');
+                
+                const response = await callGoogleScript('loadData', { sheet: 'Notas' });
+                
+                if (response && response.success && response.data && response.data.length > 1) {
+                    displayNotesInDashboard(response.data);
+                } else {
+                    document.getElementById('notesContainer').innerHTML = '<div class="no-notes">📝 No hay notas pendientes</div>';
+                }
+            } catch (error) {
+                console.error('❌ Error cargando notas:', error);
+                document.getElementById('notesContainer').innerHTML = '<div class="no-notes">❌ Error cargando notas</div>';
+            }
+        }
+        
+        function displayNotesInDashboard(notesData) {
+            const headers = notesData[0];
+            const notes = notesData.slice(1);
+            const notesContainer = document.getElementById('notesContainer');
+            
+            if (!notes.length) {
+                notesContainer.innerHTML = '<div class="no-notes">📝 No hay notas pendientes</div>';
+                return;
+            }
+            
+            // Filtrar notas pendientes y próximas a vencer
+            const today = new Date();
+            const nextWeek = new Date(today.getTime() + (7 * 24 * 60 * 60 * 1000));
+            
+            const relevantNotes = notes.filter(note => {
+                const estadoIndex = headers.findIndex(h => h.toUpperCase() === 'ESTADO');
+                const fechaRecordatorioIndex = headers.findIndex(h => h.toUpperCase() === 'FECHA_RECORDATORIO');
+                
+                const estado = note[estadoIndex];
+                const fechaRecordatorio = note[fechaRecordatorioIndex];
+                
+                // Mostrar notas pendientes o con fecha de recordatorio próxima
+                if (estado === 'PENDIENTE' || estado === 'ACTIVO') {
+                    if (fechaRecordatorio) {
+                        const fechaRec = new Date(fechaRecordatorio);
+                        return fechaRec <= nextWeek;
+                    }
+                    return true;
+                }
+                return false;
+            }).slice(0, 5); // Mostrar máximo 5 notas
+            
+            if (!relevantNotes.length) {
+                notesContainer.innerHTML = '<div class="no-notes">📝 No hay notas pendientes</div>';
+                return;
+            }
+            
+            let notesHTML = '';
+            relevantNotes.forEach(note => {
+                const personalIndex = headers.findIndex(h => h.toUpperCase() === 'PERSONAL');
+                const notasIndex = headers.findIndex(h => h.toUpperCase() === 'NOTAS');
+                const fechaRecordatorioIndex = headers.findIndex(h => h.toUpperCase() === 'FECHA_RECORDATORIO');
+                const prioridadIndex = headers.findIndex(h => h.toUpperCase() === 'PRIORIDAD');
+                
+                const personal = note[personalIndex] || 'General';
+                const texto = note[notasIndex] || 'Sin texto';
+                const fechaRecordatorio = note[fechaRecordatorioIndex] || '';
+                const prioridad = note[prioridadIndex] || 'NORMAL';
+                
+                // Determinar color según prioridad
+                let priorityClass = 'normal';
+                if (prioridad === 'ALTA' || prioridad === 'URGENTE') {
+                    priorityClass = 'high';
+                } else if (prioridad === 'MEDIA') {
+                    priorityClass = 'medium';
+                }
+                
+                // Formatear fecha
+                let fechaTexto = '';
+                if (fechaRecordatorio) {
+                    const fecha = new Date(fechaRecordatorio);
+                    fechaTexto = fecha.toLocaleDateString('es-ES');
+                }
+                
+                notesHTML += `
+                    <div class="note-item priority-${priorityClass}">
+                        <div class="note-content">
+                            <div class="note-text">${texto}</div>
+                            <div class="note-info">
+                                <span class="note-personal">${personal}</span>
+                                ${fechaTexto ? `<span class="note-date">${fechaTexto}</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="note-priority">
+                            ${prioridad === 'ALTA' || prioridad === 'URGENTE' ? '🔴' : 
+                              prioridad === 'MEDIA' ? '🟡' : '🟢'}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            notesContainer.innerHTML = notesHTML;
+        }
+        
+        async function refreshNotes() {
+            await loadNotesInDashboard();
+            showSuccess('Notas actualizadas');
+        }
+        
+        // Cargar notas al inicializar dashboard
+        const originalLoadDashboard = loadDashboard;
+        loadDashboard = async function() {
+            await originalLoadDashboard();
+            await loadNotesInDashboard();
+        };
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Sistema con mejoras visuales cargado');
+        });
+    </script>
+</body>
+</html>
